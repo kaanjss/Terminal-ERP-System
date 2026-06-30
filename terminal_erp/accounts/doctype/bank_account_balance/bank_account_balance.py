@@ -1,0 +1,23 @@
+# Copyright (c) 2026, Terminal Framework Technologies Pvt. Ltd. and contributors
+# For license information, please see license.txt
+
+# import terminal_framework
+from terminal_framework.model.document import Document
+
+
+class BankAccountBalance(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from terminal_framework.types import DF
+
+		balance: DF.Currency
+		bank_account: DF.Link
+		company: DF.Link | None
+		date: DF.Date
+	# end: auto-generated types
+
+	pass

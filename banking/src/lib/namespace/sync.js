@@ -1,11 +1,11 @@
 import isPlainObject from "lodash.isplainobject";
 
-Object.assign(frappe.model, {
+Object.assign(terminal_framework.model, {
 	docinfo: {},
 	sync: function (r) {
 		/* docs:
             extract docs, docinfo (attachments, comments, assignments)
-            from incoming request and set in `locals` and `frappe.model.docinfo`
+            from incoming request and set in `locals` and `terminal_framework.model.docinfo`
         */
 		var isPlain;
 		if (!r.docs && !r.docinfo) r = { docs: r };
@@ -19,16 +19,16 @@ Object.assign(frappe.model, {
 
 				if (locals[d.doctype] && locals[d.doctype][d.name]) {
 					// update values
-					frappe.model.update_in_locals(d);
+					terminal_framework.model.update_in_locals(d);
 				} else {
-					frappe.model.add_to_locals(d);
+					terminal_framework.model.add_to_locals(d);
 				}
 
 				d.__last_sync_on = new Date();
 			}
 		}
 
-		frappe.model.sync_docinfo(r);
+		terminal_framework.model.sync_docinfo(r);
 		return r.docs;
 	},
 
@@ -36,13 +36,13 @@ Object.assign(frappe.model, {
 		// set docinfo (comments, assign, attachments)
 		if (r.docinfo) {
 			const { doctype, name } = r.docinfo;
-			if (!frappe.model.docinfo[doctype]) {
-				frappe.model.docinfo[doctype] = {};
+			if (!terminal_framework.model.docinfo[doctype]) {
+				terminal_framework.model.docinfo[doctype] = {};
 			}
-			frappe.model.docinfo[doctype][name] = r.docinfo;
+			terminal_framework.model.docinfo[doctype][name] = r.docinfo;
 
-			// copy values to frappe.boot.user_info
-			Object.assign(frappe.boot.user_info, r.docinfo.user_info);
+			// copy values to terminal_framework.boot.user_info
+			Object.assign(terminal_framework.boot.user_info, r.docinfo.user_info);
 		}
 
 		return r.docs;
@@ -53,16 +53,16 @@ Object.assign(frappe.model, {
 
 		if (!doc.name && doc.__islocal) {
 			// get name (local if required)
-			if (!doc.parentfield) frappe.model.clear_doc(doc);
+			if (!doc.parentfield) terminal_framework.model.clear_doc(doc);
 
-			doc.name = frappe.model.get_new_name(doc.doctype);
+			doc.name = terminal_framework.model.get_new_name(doc.doctype);
 
-			if (!doc.parentfield) frappe.provide("frappe.model.docinfo." + doc.doctype + "." + doc.name);
+			if (!doc.parentfield) terminal_framework.provide("terminal_framework.model.docinfo." + doc.doctype + "." + doc.name);
 		}
 
 		locals[doc.doctype][doc.name] = doc;
 
-		// let meta = frappe.get_meta(doc.doctype);
+		// let meta = terminal_framework.get_meta(doc.doctype);
 		// let is_table = meta ? meta.istable : doc.parentfield;
 		// // add child docs to locals
 		// if (!is_table) {
@@ -75,7 +75,7 @@ Object.assign(frappe.model, {
 
 		//                 if (typeof d == "object" && !d.parent) d.parent = doc.name;
 
-		//                 frappe.model.add_to_locals(d);
+		//                 terminal_framework.model.add_to_locals(d);
 		//             }
 		//         }
 		//     }
@@ -92,8 +92,8 @@ Object.assign(frappe.model, {
 		};
 
 		for (let fieldname in doc) {
-			let df = frappe.meta.get_field(doc.doctype, fieldname);
-			if (df && frappe.model.table_fields.includes(df.fieldtype)) {
+			let df = terminal_framework.meta.get_field(doc.doctype, fieldname);
+			if (df && terminal_framework.model.table_fields.includes(df.fieldtype)) {
 				// table
 				if (!(doc[fieldname] instanceof Array)) {
 					doc[fieldname] = [];
@@ -113,7 +113,7 @@ Object.assign(frappe.model, {
 
 						if (!d.name) {
 							// incoming row is new, find a new name
-							d.name = frappe.model.get_new_name(doc.doctype);
+							d.name = terminal_framework.model.get_new_name(doc.doctype);
 						}
 
 						// if incoming row is not registered, register it
@@ -131,7 +131,7 @@ Object.assign(frappe.model, {
 					} else {
 						local_doc[fieldname].push(d);
 						if (!d.parent) d.parent = doc.name;
-						frappe.model.add_to_locals(d);
+						terminal_framework.model.add_to_locals(d);
 					}
 				}
 

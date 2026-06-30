@@ -36,13 +36,13 @@ jobs:
           cache: pip
 
       - name: Download Semgrep rules
-        run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
+        run: git clone --depth 1 https://github.com/terminal_framework/semgrep-rules.git terminal_framework-semgrep-rules
 
       - name: Download semgrep
         run: pip install semgrep
 
       - name: Run Semgrep rules
-        run: semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+        run: semgrep ci --config ./terminal_framework-semgrep-rules/rules --config r/python.lang.correctness
 
       - name: Semgrep for Test Correctness
         run: semgrep ci --include=**/test_*.py --config ./semgrep/test-correctness.yml

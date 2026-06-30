@@ -12,15 +12,15 @@ APP_NAME="${APP_NAME:?APP_NAME env var is required}"
 cd ~ || exit
 
 echo "=== Setting up bench ==="
-pip install frappe-bench
-bench -v init frappe-bench --skip-assets --skip-redis-config-generation --python "$(which python)"
-cd ./frappe-bench || exit
+pip install terminal_framework-bench
+bench -v init terminal_framework-bench --skip-assets --skip-redis-config-generation --python "$(which python)"
+cd ./terminal_framework-bench || exit
 bench get-app --skip-assets "${APP_NAME}" "${GITHUB_WORKSPACE}"
 
 echo "=== Setting up sync_translations_${HOTFIX_BRANCH} branch ==="
 cd "./apps/${APP_NAME}" || exit
-git config user.email "developers@erpnext.com"
-git config user.name "frappe-pr-bot"
+git config user.email "developers@terminal_erp.com"
+git config user.name "terminal_framework-pr-bot"
 git remote set-url upstream "https://github.com/${GITHUB_REPOSITORY}.git"
 git config remote.upstream.fetch "+refs/heads/*:refs/remotes/upstream/*"
 gh auth setup-git

@@ -18,7 +18,7 @@ export default defineConfig({
 		}
 	},
 	build: {
-		outDir: '../erpnext/public/banking',
+		outDir: '../terminal_erp/public/banking',
 		emptyOutDir: true,
 		target: 'es2015',
 		rollupOptions: {
@@ -30,8 +30,8 @@ export default defineConfig({
 					if (id.includes('react-dom') || id.includes('/react/')) {
 						return 'vendor-react'
 					}
-					if (id.includes('frappe-react-sdk')) {
-						return 'vendor-frappe'
+					if (id.includes('terminal_framework-react-sdk')) {
+						return 'vendor-terminal_framework'
 					}
 					if (id.includes('@tanstack')) {
 						return 'vendor-tanstack'

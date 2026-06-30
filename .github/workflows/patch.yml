@@ -67,19 +67,19 @@ jobs:
 
       # The v14 baseline backup is a fixed published file — cache it instead of re-downloading
       # it from the GitHub release every run.
-      - name: Cache erpnext v14 backup
+      - name: Cache terminal_erp v14 backup
         id: cache-v14
         uses: actions/cache@v4
         with:
-          path: ~/erpnext-v14.sql.gz
-          key: erpnext-v14-sql-gz
+          path: ~/terminal_erp-v14.sql.gz
+          key: terminal_erp-v14-sql-gz
 
-      - name: Download erpnext v14 backup
+      - name: Download terminal_erp v14 backup
         if: steps.cache-v14.outputs.cache-hit != 'true'
         run: |
           curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
-            -o ~/erpnext-v14.sql.gz \
-            https://github.com/frappe/erpnext/releases/download/v14-baseline/erpnext-v14.sql.gz
+            -o ~/terminal_erp-v14.sql.gz \
+            https://github.com/terminal_framework/terminal_erp/releases/download/v14-baseline/terminal_erp-v14.sql.gz
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -116,7 +116,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install frappe-bench
+          pip install terminal_framework-bench
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
           DB: mariadb
@@ -124,15 +124,15 @@ jobs:
 
       - name: Run Patch Tests
         run: |
-          cd ~/frappe-bench/
+          cd ~/terminal_framework-bench/
           bench remove-app payments --force
-          jq 'del(.install_apps)' ~/frappe-bench/sites/test_site/site_config.json > tmp.json
-          mv tmp.json ~/frappe-bench/sites/test_site/site_config.json
+          jq 'del(.install_apps)' ~/terminal_framework-bench/sites/test_site/site_config.json > tmp.json
+          mv tmp.json ~/terminal_framework-bench/sites/test_site/site_config.json
 
-          bench --site test_site --force restore ~/erpnext-v14.sql.gz
+          bench --site test_site --force restore ~/terminal_erp-v14.sql.gz
 
-          git -C "apps/frappe" remote set-url upstream https://github.com/frappe/frappe.git
-          git -C "apps/erpnext" remote set-url upstream https://github.com/frappe/erpnext.git
+          git -C "apps/terminal_framework" remote set-url upstream https://github.com/terminal_framework/terminal_framework.git
+          git -C "apps/terminal_erp" remote set-url upstream https://github.com/terminal_framework/terminal_erp.git
 
           # Start every bench process except the background workers. If workers run during a
           # migrate, they pick up the orphan-link cleanup jobs it enqueues and race its schema
@@ -140,8 +140,8 @@ jobs:
           # other services stay up; the queued jobs simply wait and are harmless here.
           function start_bench_without_workers() {
             local procs
-            procs=$(awk -F: '/^[a-z_]+:/ && $1 !~ /worker/ {print $1}' ~/frappe-bench/Procfile)
-            honcho start -f ~/frappe-bench/Procfile $procs &>> ~/frappe-bench/bench_start.log &
+            procs=$(awk -F: '/^[a-z_]+:/ && $1 !~ /worker/ {print $1}' ~/terminal_framework-bench/Procfile)
+            honcho start -f ~/terminal_framework-bench/Procfile $procs &>> ~/terminal_framework-bench/bench_start.log &
           }
 
           function update_to_version() {
@@ -151,17 +151,17 @@ jobs:
             echo "Updating to v$version"
 
             # Fetch and checkout branches
-            git -C "apps/frappe" fetch --depth 1 upstream $branch_name:$branch_name
-            git -C "apps/erpnext" fetch --depth 1 upstream $branch_name:$branch_name
-            git -C "apps/frappe" checkout -q -f $branch_name
-            git -C "apps/erpnext" checkout -q -f $branch_name
+            git -C "apps/terminal_framework" fetch --depth 1 upstream $branch_name:$branch_name
+            git -C "apps/terminal_erp" fetch --depth 1 upstream $branch_name:$branch_name
+            git -C "apps/terminal_framework" checkout -q -f $branch_name
+            git -C "apps/terminal_erp" checkout -q -f $branch_name
 
             # Resetup env and install apps
             pgrep honcho | xargs kill
             sleep 10
-            rm -rf ~/frappe-bench/env
+            rm -rf ~/terminal_framework-bench/env
             bench -v setup env --python python$2
-            bench pip install -e ./apps/erpnext
+            bench pip install -e ./apps/terminal_erp
             start_bench_without_workers
 
             bench --site test_site migrate
@@ -171,14 +171,14 @@ jobs:
           update_to_version 16 3.14
 
           echo "Updating to latest version"
-          git -C "apps/frappe" fetch --depth 1 upstream "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
-          git -C "apps/frappe" checkout -q -f FETCH_HEAD
-          git -C "apps/erpnext" checkout -q -f "$GITHUB_SHA"
+          git -C "apps/terminal_framework" fetch --depth 1 upstream "${GITHUB_BASE_REF:-${GITHUB_REF##*/}}"
+          git -C "apps/terminal_framework" checkout -q -f FETCH_HEAD
+          git -C "apps/terminal_erp" checkout -q -f "$GITHUB_SHA"
 
           pgrep honcho | xargs kill
-          rm -rf ~/frappe-bench/env
+          rm -rf ~/terminal_framework-bench/env
           bench -v setup env
-          bench pip install -e ./apps/erpnext
+          bench pip install -e ./apps/terminal_erp
           start_bench_without_workers
 
           bench --site test_site migrate
@@ -186,7 +186,7 @@ jobs:
       - name: Show bench output
         if: ${{ always() }}
         run: |
-          cd ~/frappe-bench
+          cd ~/terminal_framework-bench
           cat bench_start.log || true
           cd logs
           for f in ./*.log*; do

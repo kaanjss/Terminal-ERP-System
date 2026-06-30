@@ -5,8 +5,8 @@ set -e
 cd ~ || exit
 
 githubbranch=${GITHUB_BASE_REF:-${GITHUB_REF##*/}}
-frappeuser=${FRAPPE_USER:-"frappe"}
-frappecommitish=${FRAPPE_BRANCH:-$githubbranch}
+terminal_frameworkuser=${FRAPPE_USER:-"terminal_framework"}
+terminal_frameworkcommitish=${FRAPPE_BRANCH:-$githubbranch}
 db_host=${DB_HOST:-"127.0.0.1"}
 db_user_host=${DB_USER_HOST:-"localhost"}
 wkhtmltox_deb=${WKHTMLTOX_DEB:-"/tmp/wkhtmltox.deb"}
@@ -33,13 +33,13 @@ run_as_ci_user_if_needed() {
         apt-get install -y --no-install-recommends "${missing_packages[@]}"
     fi
 
-    local ci_user="${ERPNEXT_CI_USER:-frappe}"
+    local ci_user="${ERPNEXT_CI_USER:-terminal_framework}"
 
     if ! id "$ci_user" >/dev/null 2>&1; then
         useradd --home-dir "$HOME" --no-create-home --shell /bin/bash "$ci_user"
     fi
 
-    rm -rf ~/frappe ~/frappe-bench
+    rm -rf ~/terminal_framework ~/terminal_framework-bench
 
     local ci_dirs=(
         "$HOME"
@@ -86,11 +86,11 @@ if [ -n "${GITHUB_WORKSPACE:-}" ]; then
     git config --global --add safe.directory "$GITHUB_WORKSPACE/.git" || true
 fi
 
-rm -rf ~/frappe ~/frappe-bench
+rm -rf ~/terminal_framework ~/terminal_framework-bench
 
 # ---------------------------------------------------------------------------
 # Phase 1 — parallelise the three slow, independent setup steps:
-#   a) system packages   b) frappe-bench pip install   c) frappe git fetch
+#   a) system packages   b) terminal_framework-bench pip install   c) terminal_framework git fetch
 # ---------------------------------------------------------------------------
 
 if [ "${SKIP_SYSTEM_SETUP:-0}" != "1" ]; then
@@ -101,19 +101,19 @@ if [ "${SKIP_SYSTEM_SETUP:-0}" != "1" ]; then
     sudo apt-get install -y libcups2-dev redis-server mariadb-client libmariadb-dev &
     apt_pid=$!
 
-    pip install frappe-bench &
+    pip install terminal_framework-bench &
     pip_pid=$!
 else
     apt_pid=
     pip_pid=
 fi
 
-mkdir frappe
+mkdir terminal_framework
 (
-  cd frappe
+  cd terminal_framework
   git init
-  git remote add origin "https://github.com/${frappeuser}/frappe"
-  git fetch origin "${frappecommitish}" --depth 1
+  git remote add origin "https://github.com/${terminal_frameworkuser}/terminal_framework"
+  git fetch origin "${terminal_frameworkcommitish}" --depth 1
 ) &
 clone_pid=$!
 
@@ -121,10 +121,10 @@ if [ -n "$apt_pid" ]; then wait $apt_pid; fi
 if [ -n "$pip_pid" ]; then wait $pip_pid; fi
 wait $clone_pid
 
-pushd frappe
+pushd terminal_framework
 git checkout FETCH_HEAD
 popd
-frappe_sha=$(git -C frappe rev-parse HEAD)
+terminal_framework_sha=$(git -C terminal_framework rev-parse HEAD)
 
 get_bench_cache_archive() {
     if [ -z "$bench_cache_dir" ]; then
@@ -133,7 +133,7 @@ get_bench_cache_archive() {
 
     mkdir -p "$bench_cache_dir"
 
-    # Keyed on tool versions only (NOT the frappe SHA): any recent base bench works, because
+    # Keyed on tool versions only (NOT the terminal_framework SHA): any recent base bench works, because
     # restore_warm_bench fast-forwards it to the exact live develop SHA. This is what lets a
     # constantly-moving develop still hit the cache.
     local cache_key
@@ -146,7 +146,7 @@ get_bench_cache_archive() {
         } | sha256sum | awk '{print $1}'
     )
 
-    echo "${bench_cache_dir}/frappe-bench-base-${cache_key}.tar.zst"
+    echo "${bench_cache_dir}/terminal_framework-bench-base-${cache_key}.tar.zst"
 }
 
 restore_warm_bench() {
@@ -155,36 +155,36 @@ restore_warm_bench() {
 
     echo "Restoring base bench from ${bench_cache_archive}"
     tar --use-compress-program=unzstd -xf "$bench_cache_archive" -C ~ || return 1
-    [ -d ~/frappe-bench/apps/frappe/.git ] || return 1
-    mkdir -p ~/frappe-bench/sites ~/frappe-bench/logs
-    [ -f ~/frappe-bench/sites/apps.txt ] || printf "frappe\n" > ~/frappe-bench/sites/apps.txt
-    [ -f ~/frappe-bench/sites/common_site_config.json ] || printf "{}\n" > ~/frappe-bench/sites/common_site_config.json
+    [ -d ~/terminal_framework-bench/apps/terminal_framework/.git ] || return 1
+    mkdir -p ~/terminal_framework-bench/sites ~/terminal_framework-bench/logs
+    [ -f ~/terminal_framework-bench/sites/apps.txt ] || printf "terminal_framework\n" > ~/terminal_framework-bench/sites/apps.txt
+    [ -f ~/terminal_framework-bench/sites/common_site_config.json ] || printf "{}\n" > ~/terminal_framework-bench/sites/common_site_config.json
 
-    # Fast-forward the restored frappe to the EXACT live develop SHA fetched in phase 1, then
+    # Fast-forward the restored terminal_framework to the EXACT live develop SHA fetched in phase 1, then
     # rebuild only what changed. The editable install means the venv tracks the new code with
     # no reinstall. Any failure returns non-zero so the caller falls back to a full bench init.
     if ! (
-        cd ~/frappe-bench/apps/frappe || exit 1
-        # Phase 1 already fetched ~/frappe to the exact live develop SHA. Fetch that commit
+        cd ~/terminal_framework-bench/apps/terminal_framework || exit 1
+        # Phase 1 already fetched ~/terminal_framework to the exact live develop SHA. Fetch that commit
         # straight from it (bench init names the remote 'upstream', not 'origin', and points
         # it at this local clone — so a plain `git fetch origin` does not work).
-        git fetch --no-tags "$HOME/frappe" HEAD || exit 1
+        git fetch --no-tags "$HOME/terminal_framework" HEAD || exit 1
         git checkout --force FETCH_HEAD || exit 1
     ); then
-        echo "Fast-forward to ${frappe_sha} failed; falling back to full init"
-        rm -rf ~/frappe-bench
+        echo "Fast-forward to ${terminal_framework_sha} failed; falling back to full init"
+        rm -rf ~/terminal_framework-bench
         return 1
     fi
 
-    # Pick up any frappe dependency changes since the base was built (cached → fast if none),
+    # Pick up any terminal_framework dependency changes since the base was built (cached → fast if none),
     # so a develop commit that bumped requirements doesn't leave a stale venv.
-    if ! ~/frappe-bench/env/bin/python -m pip install -q -e ~/frappe-bench/apps/frappe; then
-        echo "frappe dependency refresh failed; falling back to full init"
-        rm -rf ~/frappe-bench
+    if ! ~/terminal_framework-bench/env/bin/python -m pip install -q -e ~/terminal_framework-bench/apps/terminal_framework; then
+        echo "terminal_framework dependency refresh failed; falling back to full init"
+        rm -rf ~/terminal_framework-bench
         return 1
     fi
 
-    ( cd ~/frappe-bench && CI=Yes bench build --app frappe ) || { rm -rf ~/frappe-bench; return 1; }
+    ( cd ~/terminal_framework-bench && CI=Yes bench build --app terminal_framework ) || { rm -rf ~/terminal_framework-bench; return 1; }
     return 0
 }
 
@@ -208,10 +208,10 @@ save_warm_bench() {
     # restore_warm_bench runs `bench build` to regenerate it.
     tar \
         --use-compress-program="zstd -T0 -3" \
-        --exclude="frappe-bench/logs" \
-        --exclude="frappe-bench/sites/assets" \
+        --exclude="terminal_framework-bench/logs" \
+        --exclude="terminal_framework-bench/sites/assets" \
         -cf "$tmp_archive" \
-        -C ~ frappe-bench
+        -C ~ terminal_framework-bench
     mv "$tmp_archive" "$bench_cache_archive"
 }
 
@@ -234,30 +234,30 @@ else
 fi
 
 if ! restore_warm_bench; then
-    bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frappe-bench
+    bench init --skip-assets --terminal_framework-path ~/terminal_framework --python "$(which python)" terminal_framework-bench
 
-    cd ~/frappe-bench || exit
+    cd ~/terminal_framework-bench || exit
 
     sed -i 's/watch:/# watch:/g' Procfile
     sed -i 's/schedule:/# schedule:/g' Procfile
     sed -i 's/socketio:/# socketio:/g' Procfile
     sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-    CI=Yes bench build --app frappe
+    CI=Yes bench build --app terminal_framework
     save_warm_bench
 fi
 
 if [ -n "$wkpid" ]; then wait $wkpid; fi
 
-mkdir -p ~/frappe-bench/sites/test_site
+mkdir -p ~/terminal_framework-bench/sites/test_site
 
 if [ "$DB" == "mariadb" ];then
-    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_mariadb.json" ~/frappe-bench/sites/test_site/site_config.json
+    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_mariadb.json" ~/terminal_framework-bench/sites/test_site/site_config.json
     if [ "$db_host" != "127.0.0.1" ]; then
-        sed -i "s/\"db_host\": \"127.0.0.1\"/\"db_host\": \"${db_host}\"/" ~/frappe-bench/sites/test_site/site_config.json
+        sed -i "s/\"db_host\": \"127.0.0.1\"/\"db_host\": \"${db_host}\"/" ~/terminal_framework-bench/sites/test_site/site_config.json
     fi
 else
-    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_postgres.json" ~/frappe-bench/sites/test_site/site_config.json
+    cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_postgres.json" ~/terminal_framework-bench/sites/test_site/site_config.json
 fi
 
 
@@ -286,16 +286,16 @@ if [ "$DB" == "mariadb" ];then
         mariadb --host "$db_host" --port 3306 -u root -proot -e "SET GLOBAL innodb_file_per_table=0;"
     fi
 
-    mariadb --host "$db_host" --port 3306 -u root -proot -e "CREATE USER 'test_frappe'@'${db_user_host}' IDENTIFIED BY 'test_frappe'"
-    mariadb --host "$db_host" --port 3306 -u root -proot -e "CREATE DATABASE test_frappe"
-    mariadb --host "$db_host" --port 3306 -u root -proot -e "GRANT ALL PRIVILEGES ON \`test_frappe\`.* TO 'test_frappe'@'${db_user_host}'"
+    mariadb --host "$db_host" --port 3306 -u root -proot -e "CREATE USER 'test_terminal_framework'@'${db_user_host}' IDENTIFIED BY 'test_terminal_framework'"
+    mariadb --host "$db_host" --port 3306 -u root -proot -e "CREATE DATABASE test_terminal_framework"
+    mariadb --host "$db_host" --port 3306 -u root -proot -e "GRANT ALL PRIVILEGES ON \`test_terminal_framework\`.* TO 'test_terminal_framework'@'${db_user_host}'"
 
     mariadb --host "$db_host" --port 3306 -u root -proot -e "FLUSH PRIVILEGES"
 fi
 
 if [ "$DB" == "postgres" ];then
-    echo "travis" | psql -h 127.0.0.1 -p 5432 -c "CREATE DATABASE test_frappe" -U postgres;
-    echo "travis" | psql -h 127.0.0.1 -p 5432 -c "CREATE USER test_frappe WITH PASSWORD 'test_frappe'" -U postgres;
+    echo "travis" | psql -h 127.0.0.1 -p 5432 -c "CREATE DATABASE test_terminal_framework" -U postgres;
+    echo "travis" | psql -h 127.0.0.1 -p 5432 -c "CREATE USER test_terminal_framework WITH PASSWORD 'test_terminal_framework'" -U postgres;
 
     # Durability-off for speed (no fsync/synchronous_commit/full_page_writes) is applied by
     # start-db.sh's postgres `-o` flags on every start — setup job AND each test shard — so it is
@@ -303,26 +303,26 @@ if [ "$DB" == "postgres" ];then
     # container.
 fi
 
-cd ~/frappe-bench || exit
+cd ~/terminal_framework-bench || exit
 
 run_ci_step "Get payments app" bench get-app payments --branch develop
 
-# Opt-in: skip building erpnext's frontend assets. Server tests don't need them, but PDF
+# Opt-in: skip building terminal_erp's frontend assets. Server tests don't need them, but PDF
 # tests (print formats) do — they pass only if the PDF renderer ignores missing assets.
 # Enable with CI_SKIP_ERPNEXT_ASSETS=1 to test; if PDF tests fail, unset it.
-erpnext_get_app_args=()
-if [ "${CI_SKIP_ERPNEXT_ASSETS:-0}" = "1" ]; then erpnext_get_app_args=(--skip-assets); fi
-run_ci_step "Get erpnext app" bench get-app erpnext "${GITHUB_WORKSPACE}" "${erpnext_get_app_args[@]}"
+terminal_erp_get_app_args=()
+if [ "${CI_SKIP_ERPNEXT_ASSETS:-0}" = "1" ]; then terminal_erp_get_app_args=(--skip-assets); fi
+run_ci_step "Get terminal_erp app" bench get-app terminal_erp "${GITHUB_WORKSPACE}" "${terminal_erp_get_app_args[@]}"
 
 if [ "$TYPE" == "server" ]; then run_ci_step "Setup dev requirements" bench setup requirements --dev; fi
 
-bench start >> ~/frappe-bench/bench_start.log 2>&1 &
+bench start >> ~/terminal_framework-bench/bench_start.log 2>&1 &
 
 # Under heavy concurrency, gunicorn's startup can delay redis coming up. reinstall and the
 # tests need redis, so wait for it (best-effort, bounded) instead of racing — contention
 # then slows the job rather than failing it.
 wait_for_redis() {
-    local cfg=~/frappe-bench/sites/common_site_config.json
+    local cfg=~/terminal_framework-bench/sites/common_site_config.json
     [ -f "$cfg" ] || return 0
     local ports port
     ports=$(python - "$cfg" <<'PY'

@@ -1,55 +1,55 @@
 accounts:
-- erpnext/accounts/*
-- erpnext/controllers/accounts_controller.py
-- erpnext/controllers/taxes_and_totals.py
+- terminal_erp/accounts/*
+- terminal_erp/controllers/accounts_controller.py
+- terminal_erp/controllers/taxes_and_totals.py
 
 stock:
-- erpnext/stock/*
-- erpnext/controllers/stock_controller.py
-- erpnext/controllers/item_variant.py
+- terminal_erp/stock/*
+- terminal_erp/controllers/stock_controller.py
+- terminal_erp/controllers/item_variant.py
 
 assets:
-- erpnext/assets/*
+- terminal_erp/assets/*
 
 regional:
-- erpnext/regional/*
+- terminal_erp/regional/*
 
 selling:
-- erpnext/selling/*
-- erpnext/controllers/selling_controller.py
+- terminal_erp/selling/*
+- terminal_erp/controllers/selling_controller.py
 
 buying:
-- erpnext/buying/*
-- erpnext/controllers/buying_controller.py
+- terminal_erp/buying/*
+- terminal_erp/controllers/buying_controller.py
 
 support:
-- erpnext/support/*
+- terminal_erp/support/*
 
 POS:
 - pos*
 
 ecommerce:
-- erpnext/e_commerce/*
+- terminal_erp/e_commerce/*
 
 maintenance:
-- erpnext/maintenance/*
+- terminal_erp/maintenance/*
 
 manufacturing:
-- erpnext/manufacturing/*
+- terminal_erp/manufacturing/*
 
 crm:
-- erpnext/crm/*
+- terminal_erp/crm/*
 
 HR:
-- erpnext/hr/*
+- terminal_erp/hr/*
 
 payroll:
-- erpnext/payroll*
+- terminal_erp/payroll*
 
 projects:
-- erpnext/projects/*
+- terminal_erp/projects/*
 
 # Any python files modifed but no test files modified
 needs-tests:
-- any: ['erpnext/**/*.py']
-  all: ['!erpnext/**/test*.py']
+- any: ['terminal_erp/**/*.py']
+  all: ['!terminal_erp/**/test*.py']

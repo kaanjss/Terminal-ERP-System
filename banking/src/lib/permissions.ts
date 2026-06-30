@@ -3,7 +3,7 @@
  * @param {string} doctype
  **/
 export const canReadDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_read?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_read?.includes(doctype) || false
 }
 
 
@@ -12,7 +12,7 @@ export const canReadDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canWriteDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_write?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_write?.includes(doctype) || false
 }
 
 
@@ -21,7 +21,7 @@ export const canWriteDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canCreateDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_create?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_create?.includes(doctype) || false
 }
 
 
@@ -30,7 +30,7 @@ export const canCreateDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canDeleteDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_delete?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_delete?.includes(doctype) || false
 }
 
 
@@ -39,7 +39,7 @@ export const canDeleteDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canCancelDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_cancel?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_cancel?.includes(doctype) || false
 }
 
 
@@ -48,7 +48,7 @@ export const canCancelDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canSearchDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_search?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_search?.includes(doctype) || false
 }
 
 
@@ -57,7 +57,7 @@ export const canSearchDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canImportDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_import?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_import?.includes(doctype) || false
 }
 
 
@@ -66,7 +66,7 @@ export const canImportDocument = (doctype: string) => {
  * @param {string} doctype
  **/
 export const canExportDocument = (doctype: string) => {
-    return window.frappe?.boot?.user?.can_export?.includes(doctype) || false
+    return window.terminal_framework?.boot?.user?.can_export?.includes(doctype) || false
 }
 /**
  * Check if the user has a role
@@ -74,5 +74,5 @@ export const canExportDocument = (doctype: string) => {
  * @returns boolean
  */
 export const hasRole = (role: string) => {
-    return window.frappe?.boot?.user?.roles?.includes(role) || false
+    return window.terminal_framework?.boot?.user?.roles?.includes(role) || false
 }

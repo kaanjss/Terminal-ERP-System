@@ -18,7 +18,7 @@ const FRAPPE_DATE_FORMAT = "YYYY-MM-DD"
 
 export const getUserDateFormat = () => {
 
-    return window?.frappe?.boot?.user?.defaults?.date_format.toUpperCase() || window?.frappe.boot.sysdefaults.date_format.toUpperCase()
+    return window?.terminal_framework?.boot?.user?.defaults?.date_format.toUpperCase() || window?.terminal_framework.boot.sysdefaults.date_format.toUpperCase()
 
 }
 // const FRAPPE_DATETIME_FORMAT = "YYYY-MM-DD HH:mm:ss"
@@ -139,8 +139,8 @@ export const getDatesForTimePeriod = (
 
 const toUserTimezone = (timestamp: string) => {
 
-    const systemTimezone = window.frappe?.boot?.time_zone?.system
-    const userTimezone = window.frappe?.boot?.time_zone?.user
+    const systemTimezone = window.terminal_framework?.boot?.time_zone?.system
+    const userTimezone = window.terminal_framework?.boot?.time_zone?.user
 
     if (systemTimezone && userTimezone) {
         return dayjs.tz(timestamp, systemTimezone).clone().tz(userTimezone)

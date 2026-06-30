@@ -1,6 +1,6 @@
-frappe.defaults = {
+terminal_framework.defaults = {
 	get_user_default: function (key) {
-		let defaults = frappe.boot.user.defaults;
+		let defaults = terminal_framework.boot.user.defaults;
 		let d = defaults[key];
 		if (!d) {
 			key = key.replace(/ /g, "_").toLowerCase();

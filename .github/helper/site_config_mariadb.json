@@ -1,8 +1,8 @@
 {
  "db_host": "127.0.0.1",
  "db_port": 3306,
- "db_name": "test_frappe",
- "db_password": "test_frappe",
+ "db_name": "test_terminal_framework",
+ "db_password": "test_terminal_framework",
  "auto_email_id": "test@example.com",
  "mail_server": "smtp.example.com",
  "mail_login": "test@example.com",
@@ -12,6 +12,6 @@
  "root_login": "root",
  "root_password": "root",
  "host_name": "http://test_site:8000",
- "install_apps": ["payments", "erpnext"],
+ "install_apps": ["payments", "terminal_erp"],
  "throttle_user_limit": 100
 }

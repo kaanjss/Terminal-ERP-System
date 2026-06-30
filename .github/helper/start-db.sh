@@ -5,15 +5,15 @@
 # replaying a SQL dump (the ~60s hydrate restore). Each shard gets its own copy → isolation kept.
 #
 # CI_DB_DATADIR picks the path:
-#   - setup job:  /home/ci/db-data  (OUTSIDE the bench, so install.sh's `rm -rf ~/frappe-bench`
+#   - setup job:  /home/ci/db-data  (OUTSIDE the bench, so install.sh's `rm -rf ~/terminal_framework-bench`
 #                 doesn't wipe it; it's moved into the bench just before packaging)
-#   - test shard: ~/frappe-bench/mariadb-data  (where the artifact untar'd it)
+#   - test shard: ~/terminal_framework-bench/mariadb-data  (where the artifact untar'd it)
 #
 # Idempotent: inits a fresh datadir if absent (setup), else starts on the existing one (shards).
 #
 set -e
 
-ci_user="${ERPNEXT_CI_USER:-frappe}"
+ci_user="${ERPNEXT_CI_USER:-terminal_framework}"
 
 # Re-exec as the ci user so mariadbd and the datadir are owned consistently (root mariadbd is
 # refused anyway). Mirrors install.sh's user switch.
@@ -28,7 +28,7 @@ fi
 if [ "${DB:-mariadb}" = "postgres" ]; then
     PG_BIN=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)
     [ -n "$PG_BIN" ] && export PATH="$PG_BIN:$PATH"
-    PGDATA="${CI_DB_DATADIR:-$HOME/frappe-bench/pgdata}"
+    PGDATA="${CI_DB_DATADIR:-$HOME/terminal_framework-bench/pgdata}"
     if [ ! -d "$PGDATA/base" ]; then
         initdb -D "$PGDATA" -U postgres --auth-local=trust --auth-host=trust >/dev/null
         echo "host all all 127.0.0.1/32 trust" >> "$PGDATA/pg_hba.conf"
@@ -39,7 +39,7 @@ if [ "${DB:-mariadb}" = "postgres" ]; then
 fi
 
 # --- MariaDB ---
-DATADIR="${CI_DB_DATADIR:-$HOME/frappe-bench/mariadb-data}"
+DATADIR="${CI_DB_DATADIR:-$HOME/terminal_framework-bench/mariadb-data}"
 SOCK="$DATADIR/mysqld.sock"
 fresh=0
 

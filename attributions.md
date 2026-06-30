@@ -1,6 +1,6 @@
-## ERPNext includes these public works
+## Terminal ERP includes these public works
 
-For Frappe Framework, please see attributions.md at https://github.com/frappe/frappe/
+For Terminal Framework Framework, please see attributions.md at https://github.com/terminal_framework/terminal_framework/
 
 #### Images
 

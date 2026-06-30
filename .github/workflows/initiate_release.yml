@@ -25,8 +25,8 @@ jobs:
       - uses: octokit/request-action@v2.x
         with:
           route: POST /repos/{owner}/{repo}/pulls
-          owner: frappe
-          repo: erpnext
+          owner: terminal_framework
+          repo: terminal_erp
           title: |-
             "chore: release v${{ matrix.version }}"
           body: "Automated weekly release."

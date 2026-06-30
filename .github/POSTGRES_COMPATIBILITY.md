@@ -1,12 +1,12 @@
 # PostgreSQL compatibility — review guide
 
-ERPNext targets **both MariaDB and PostgreSQL from a single codebase**. The full server
+Terminal ERP targets **both MariaDB and PostgreSQL from a single codebase**. The full server
 test suite passes on both, but the PostgreSQL CI job is **label-gated** (it does not run on
 every PR), so until it is required this guide is the always-on guard. Greptile loads it as
 review context (`.greptile/config.json`).
 
-When reviewing a PR, flag any **new or changed query** (raw `frappe.db.sql`, `frappe.qb`,
-`frappe.get_all/get_list/get_value`, report SQL) that would **error on PostgreSQL** or
+When reviewing a PR, flag any **new or changed query** (raw `terminal_framework.db.sql`, `terminal_framework.qb`,
+`terminal_framework.get_all/get_list/get_value`, report SQL) that would **error on PostgreSQL** or
 **return different results on the two engines**.
 
 ## The one rule that governs everything
@@ -39,7 +39,7 @@ Flag a changed query that uses any of these:
   "add it to GROUP BY".**
 - **MySQL-only functions** — `TIMESTAMP(date,time)`, `TIMEDIFF`, `STR_TO_DATE`, `DATE_FORMAT`,
   `DATE_ADD/SUB`, `GROUP_CONCAT`, `PERIOD_DIFF`, SQL `IF(cond,a,b)`. Use the portable
-  `frappe.query_builder.functions` equivalents (`CombineDatetime`, `DateDiff`, `Case`,
+  `terminal_framework.query_builder.functions` equivalents (`CombineDatetime`, `DateDiff`, `Case`,
   `GroupConcat`, …) or a precomputed column (e.g. `posting_datetime`).
 - **`UPDATE … JOIN`** — not valid on PostgreSQL. Rewrite as `UPDATE … WHERE name IN (subquery)`.
 - **`HAVING` referencing a `SELECT` alias** — PostgreSQL rejects output-column aliases in
@@ -54,18 +54,18 @@ Flag a changed query that uses any of these:
   `get_all(dt, fields=["Account"])`, and similar — PostgreSQL quotes the identifier and matches
   it case-sensitively; a stored column named `status`/`account` won't match `"Status"`/`"Account"`
   (`column "Account" does not exist`). Use the exact stored (lower-case) fieldname.
-- **Boolean passed where an integer column is expected** — `frappe.db.set_value(dt, dn,
-  check_field, True)`, `doc.db_set(field, False)`, or `frappe.qb.update(dt).set(check_field, True)`
+- **Boolean passed where an integer column is expected** — `terminal_framework.db.set_value(dt, dn,
+  check_field, True)`, `doc.db_set(field, False)`, or `terminal_framework.qb.update(dt).set(check_field, True)`
   emit `SET col = true`, which PostgreSQL rejects on a `smallint`/`Check` column
   (`column is of type smallint but expression is of type boolean`). Pass `1`/`0`.
 - **`.like()`/`.ilike()` (or raw `LIKE`) on a NON-text column** — `idx`, `docstatus`, a date, etc.
-  frappe maps `.like()` → `ILIKE`, and PostgreSQL has no `bigint ILIKE text` operator (`operator
+  terminal_framework maps `.like()` → `ILIKE`, and PostgreSQL has no `bigint ILIKE text` operator (`operator
   does not exist: bigint ~~* unknown`). Cast the column to text first — **`Cast_(col, "varchar")`**,
   not `Cast(col, "char")` (see below). MariaDB coerces the int implicitly, so the cast is a no-op there.
 - **`CAST(… AS CHAR)` / `Cast(x, "char")`** — on PostgreSQL bare `CHAR` is `character(1)`, so
   `CAST(12 AS CHAR)` → `'1'` (silently truncates multi-digit values); MariaDB gives the full string.
   Use `VARCHAR` / `Cast_(x, "varchar")`.
-- **`.rlike()` / raw `RLIKE`** — frappe rewrites `REGEXP` → `~*` on PostgreSQL but does **not**
+- **`.rlike()` / raw `RLIKE`** — terminal_framework rewrites `REGEXP` → `~*` on PostgreSQL but does **not**
   translate `RLIKE` (no such PostgreSQL operator). Use `.regexp()` (or `.like()` for a simple prefix).
 - **`IfNull`/`Coalesce` of a typed column with a different-typed literal** — `IfNull(asset.disposal_date, 0)`
   renders `COALESCE("disposal_date", 0)`, coalescing a **DATE** with an **integer**. PostgreSQL requires
@@ -105,8 +105,8 @@ These don't error, so a one-engine CI stays green. Flag them:
   lead-time to whole days. Force float: multiply by `100.0`, or make a literal a float
   (`/ 1440` → `/ 1440.0`), or cast an operand. (Only SQL-level `/` on integer **columns/literals**
   — Python `/` is already float.)
-- **`DISTINCT` list ordering** — `frappe.get_all(distinct=True, order_by=…)` /
-  `SELECT DISTINCT … ORDER BY`: frappe's `db_query` **silently drops `ORDER BY` for distinct
+- **`DISTINCT` list ordering** — `terminal_framework.get_all(distinct=True, order_by=…)` /
+  `SELECT DISTINCT … ORDER BY`: terminal_framework's `db_query` **silently drops `ORDER BY` for distinct
   queries on PostgreSQL**, so the result is unordered there. Sort in Python instead — and use
   `key=str.casefold`, because bare `sorted()` is case-sensitive (ASCII) while MariaDB's
   collation is case-insensitive, so a plain sort reorders MariaDB's output.
@@ -149,7 +149,7 @@ These are auto-handled by the framework and are **not** breaks:
 - **`.like()` / `["like", …]`** already renders as `ILIKE` on PostgreSQL — not a
   case-sensitivity bug. *(Exception: `.like()` on a **non-text** column — `idx`, `docstatus` —
   is a hard break, `bigint ILIKE`; see §1.)*
-- **Raw `ifnull(...)`** inside `frappe.db.sql()` is rewritten to `coalesce(...)` on all engines.
+- **Raw `ifnull(...)`** inside `terminal_framework.db.sql()` is rewritten to `coalesce(...)` on all engines.
 - **Backticks**, **`LOCATE`**, **`REGEXP`** / **`.regexp()`** in raw SQL are auto-translated on
   PostgreSQL (`REGEXP` → `~*`). **But `RLIKE` / `.rlike()` is NOT translated** — that one is a
   hard break (see §1).
@@ -163,8 +163,8 @@ These are auto-handled by the framework and are **not** breaks:
 
 - **Catch-and-continue inserts** — on PostgreSQL a failed `insert()` aborts the **whole
   transaction**, so code that swallows a duplicate and keeps going dies on the next statement
-  with `InFailedSqlTransaction` (frappe dropped its blanket per-statement savepoint in
-  frappe#40075). Such a handler must wrap the fallible insert in `frappe.db.savepoint(name)` +
+  with `InFailedSqlTransaction` (terminal_framework dropped its blanket per-statement savepoint in
+  terminal_framework#40075). Such a handler must wrap the fallible insert in `terminal_framework.db.savepoint(name)` +
   `rollback(save_point=name)` — unless it re-`throw`s with no DB call before the throw, or the
   insert uses `ignore_if_duplicate=True` / `autoname="hash"` (→ `ON CONFLICT DO NOTHING`).
 

@@ -1,0 +1,440 @@
+# Copyright (c) 2015, Terminal Framework Technologies Pvt. Ltd. and Contributors
+# License: GNU General Public License v3. See license.txt
+
+
+import json
+from datetime import timedelta
+
+import terminal_framework
+from terminal_framework import _
+from terminal_framework.core.utils import get_parent_doc
+from terminal_framework.email.inbox import link_communication_to_document
+from terminal_framework.model.document import Document
+from terminal_framework.model.mapper import get_mapped_doc
+from terminal_framework.query_builder import Interval
+from terminal_framework.query_builder.functions import Now
+from terminal_framework.utils import date_diff, get_datetime, now_datetime, time_diff_in_seconds
+from terminal_framework.utils.user import is_website_user
+
+
+class Issue(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from terminal_framework.types import DF
+
+		agreement_status: DF.Literal["First Response Due", "Resolution Due", "Fulfilled", "Failed"]
+		attachment: DF.Attach | None
+		avg_response_time: DF.Duration | None
+		company: DF.Link | None
+		contact: DF.Link | None
+		content_type: DF.Data | None
+		customer: DF.Link | None
+		customer_name: DF.Data | None
+		description: DF.TextEditor | None
+		email_account: DF.Link | None
+		first_responded_on: DF.Datetime | None
+		first_response_time: DF.Duration | None
+		issue_split_from: DF.Link | None
+		issue_type: DF.Link | None
+		lead: DF.Link | None
+		naming_series: DF.Literal["ISS-.YYYY.-"]
+		on_hold_since: DF.Datetime | None
+		opening_date: DF.Date | None
+		opening_time: DF.Time | None
+		priority: DF.Link | None
+		project: DF.Link | None
+		raised_by: DF.Data | None
+		resolution_details: DF.TextEditor | None
+		resolution_time: DF.Duration | None
+		response_by: DF.Datetime | None
+		service_level_agreement: DF.Link | None
+		service_level_agreement_creation: DF.Datetime | None
+		sla_resolution_by: DF.Datetime | None
+		sla_resolution_date: DF.Datetime | None
+		status: DF.Literal["Open", "Replied", "On Hold", "Resolved", "Closed"]
+		subject: DF.Data
+		total_hold_time: DF.Duration | None
+		user_resolution_time: DF.Duration | None
+		via_customer_portal: DF.Check
+	# end: auto-generated types
+
+	def validate(self):
+		if self.is_new() and self.via_customer_portal:
+			self.flags.create_communication = True
+
+		if not self.raised_by:
+			self.raised_by = terminal_framework.session.user
+
+		self.set_lead_contact(self.raised_by)
+
+	def on_update(self):
+		# Add a communication in the issue timeline
+		if self.flags.create_communication and self.via_customer_portal:
+			self.create_communication()
+			self.flags.communication_created = None
+
+	def set_lead_contact(self, email_id):
+		import email.utils
+
+		email_id = email.utils.parseaddr(email_id)[1]
+		if email_id:
+			if not self.lead:
+				self.lead = terminal_framework.db.get_value("Lead", {"email_id": email_id})
+
+			if not self.contact and not self.customer:
+				self.contact = terminal_framework.db.get_value("Contact", {"email_id": email_id})
+
+				if self.contact:
+					contact = terminal_framework.get_doc("Contact", self.contact)
+					self.customer = contact.get_link_for("Customer")
+
+			if not self.company:
+				self.company = terminal_framework.db.get_value("Lead", self.lead, "company") or terminal_framework.db.get_default(
+					"Company"
+				)
+
+	def create_communication(self):
+		communication = terminal_framework.new_doc("Communication")
+		communication.update(
+			{
+				"communication_type": "Communication",
+				"communication_medium": "Email",
+				"sent_or_received": "Received",
+				"email_status": "Open",
+				"subject": self.subject,
+				"sender": self.raised_by,
+				"content": self.description,
+				"status": "Linked",
+				"reference_doctype": "Issue",
+				"reference_name": self.name,
+			}
+		)
+		communication.flags.ignore_permissions = True
+		communication.flags.ignore_mandatory = True
+		communication.save()
+
+	@terminal_framework.whitelist()
+	def split_issue(self, subject: str, communication_id: str):
+		from copy import deepcopy
+
+		self.check_permission("write")
+
+		replicated_issue = deepcopy(self)
+		replicated_issue.subject = subject
+		replicated_issue.issue_split_from = self.name
+		replicated_issue.first_response_time = 0
+		replicated_issue.first_responded_on = None
+		replicated_issue.creation = now_datetime()
+
+		# Reset SLA
+		if replicated_issue.service_level_agreement:
+			replicated_issue.service_level_agreement_creation = now_datetime()
+			replicated_issue.service_level_agreement = None
+			replicated_issue.agreement_status = "First Response Due"
+			replicated_issue.response_by = None
+			replicated_issue.resolution_by = None
+			replicated_issue.reset_issue_metrics()
+
+		terminal_framework.get_doc(replicated_issue).insert()
+
+		# Replicate linked Communications
+		# TODO: get all communications in timeline before this, and modify them to append them to new doc
+		comm_to_split_from = terminal_framework.get_doc("Communication", communication_id)
+		communications = terminal_framework.get_all(
+			"Communication",
+			filters={
+				"reference_doctype": "Issue",
+				"reference_name": comm_to_split_from.reference_name,
+				"creation": (">=", comm_to_split_from.creation),
+			},
+		)
+
+		for communication in communications:
+			doc = terminal_framework.get_doc("Communication", communication.name)
+			doc.reference_name = replicated_issue.name
+			doc.save(ignore_permissions=True)
+
+		terminal_framework.get_doc(
+			{
+				"doctype": "Comment",
+				"comment_type": "Info",
+				"reference_doctype": "Issue",
+				"reference_name": replicated_issue.name,
+				"content": " - Split the Issue from <a href='/app/Form/Issue/{}'>{}</a>".format(
+					self.name, terminal_framework.bold(self.name)
+				),
+			}
+		).insert(ignore_permissions=True)
+
+		return replicated_issue.name
+
+	def reset_issue_metrics(self):
+		self.db_set("resolution_time", None)
+		self.db_set("user_resolution_time", None)
+
+
+def get_list_context(context=None):
+	return {
+		"title": _("Issues"),
+		"get_list": get_issue_list,
+		"row_template": "templates/includes/issue_row.html",
+		"show_sidebar": True,
+		"show_search": True,
+		"no_breadcrumbs": True,
+	}
+
+
+def get_issue_list(doctype, txt, filters, limit_start, limit_page_length=20, order_by=None):
+	from terminal_framework.www.list import get_list
+
+	user = terminal_framework.session.user
+	contact = terminal_framework.db.get_value("Contact", {"user": user}, "name")
+	customer = None
+
+	if contact:
+		contact_doc = terminal_framework.get_doc("Contact", contact)
+		customer = contact_doc.get_link_for("Customer")
+
+	ignore_permissions = False
+	if is_website_user() and user != "Guest":
+		if not filters:
+			filters = {}
+
+		if customer:
+			filters["customer"] = customer
+		else:
+			filters["raised_by"] = user
+
+		ignore_permissions = True
+
+	return get_list(
+		doctype, txt, filters, limit_start, limit_page_length, ignore_permissions=ignore_permissions
+	)
+
+
+@terminal_framework.whitelist()
+def set_multiple_status(names: str | list, status: str):
+	for name in terminal_framework.parse_json(names):
+		set_status(name, status)
+
+
+@terminal_framework.whitelist()
+def set_status(name: str, status: str):
+	terminal_framework.has_permission("Issue", "write", name, throw=True)
+	terminal_framework.db.set_value("Issue", name, "status", status)
+
+
+def auto_close_tickets():
+	"""
+	Auto-close replied support tickets as defined on `close_issue_after_days` in Support Settings.
+	Disables the feature if `close_issue_after_days` is set to 0.
+	"""
+	auto_close_after_days = terminal_framework.db.get_single_value("Support Settings", "close_issue_after_days")
+
+	if not auto_close_after_days:
+		return
+
+	table = terminal_framework.qb.DocType("Issue")
+	issues = (
+		terminal_framework.qb.from_(table)
+		.select(table.name)
+		.where(
+			(table.modified < (Now() - Interval(days=auto_close_after_days))) & (table.status == "Replied")
+		)
+	).run(pluck=True)
+
+	for issue in issues:
+		doc = terminal_framework.get_doc("Issue", issue)
+		doc.status = "Closed"
+		doc.flags.ignore_permissions = True
+		doc.flags.ignore_mandatory = True
+		doc.save()
+
+
+def has_website_permission(doc, ptype, user, verbose=False):
+	from terminal_erp.controllers.website_list_for_contact import has_website_permission
+
+	permission_based_on_customer = has_website_permission(doc, ptype, user, verbose)
+
+	return permission_based_on_customer or doc.raised_by == user
+
+
+def update_issue(contact, method):
+	"""Called when Contact is deleted"""
+	terminal_framework.db.set_value("Issue", {"contact": contact.name}, "contact", "")
+
+
+@terminal_framework.whitelist()
+def make_task(source_name: str, target_doc: str | Document | None = None):
+	return get_mapped_doc("Issue", source_name, {"Issue": {"doctype": "Task"}}, target_doc)
+
+
+@terminal_framework.whitelist()
+def make_issue_from_communication(communication: str, ignore_communication_links: bool = False):
+	"""raise a issue from email"""
+
+	doc = terminal_framework.get_doc("Communication", communication)
+	issue = terminal_framework.get_doc(
+		{
+			"doctype": "Issue",
+			"subject": doc.subject,
+			"communication_medium": doc.communication_medium,
+			"raised_by": doc.sender or "",
+			"raised_by_phone": doc.phone_no or "",
+		}
+	).insert()
+
+	link_communication_to_document(doc, "Issue", issue.name, ignore_communication_links)
+
+	return issue.name
+
+
+def get_time_in_timedelta(time):
+	"""
+	Converts datetime.time(10, 36, 55, 961454) to datetime.timedelta(seconds=38215)
+	"""
+	return timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
+
+
+def set_first_response_time(communication, method):
+	if communication.get("reference_doctype") == "Issue":
+		issue = get_parent_doc(communication)
+		if is_first_response(issue) and issue.service_level_agreement:
+			first_response_time = calculate_first_response_time(issue, get_datetime(issue.first_responded_on))
+			issue.db_set("first_response_time", first_response_time)
+
+
+def is_first_response(issue):
+	responses = terminal_framework.get_all(
+		"Communication", filters={"reference_name": issue.name, "sent_or_received": "Sent"}
+	)
+	if len(responses) == 1:
+		return True
+	return False
+
+
+def calculate_first_response_time(issue, first_responded_on):
+	issue_creation_date = get_datetime(issue.service_level_agreement_creation or issue.creation)
+	issue_creation_time = get_time_in_seconds(issue_creation_date)
+	first_responded_on_in_seconds = get_time_in_seconds(first_responded_on)
+	support_hours = terminal_framework.get_cached_doc(
+		"Service Level Agreement", issue.service_level_agreement
+	).support_and_resolution
+
+	if issue_creation_date.day == first_responded_on.day:
+		if is_work_day(issue_creation_date, support_hours):
+			start_time, end_time = get_working_hours(issue_creation_date, support_hours)
+
+			# issue creation and response on the same day during working hours
+			if is_during_working_hours(issue_creation_date, support_hours) and is_during_working_hours(
+				first_responded_on, support_hours
+			):
+				return get_elapsed_time(issue_creation_date, first_responded_on)
+
+			# issue creation is during working hours, but first response was after working hours
+			elif is_during_working_hours(issue_creation_date, support_hours):
+				return get_elapsed_time(issue_creation_time, end_time)
+
+			# issue creation was before working hours but first response is during working hours
+			elif is_during_working_hours(first_responded_on, support_hours):
+				return get_elapsed_time(start_time, first_responded_on_in_seconds)
+
+			# both issue creation and first response were after working hours
+			else:
+				return 1.0  # this should ideally be zero, but it gets reset when the next response is sent if the value is zero
+
+		else:
+			return 1.0
+
+	else:
+		# response on the next day
+		if date_diff(first_responded_on, issue_creation_date) == 1:
+			first_response_time = 0
+		else:
+			first_response_time = calculate_initial_frt(
+				issue_creation_date, date_diff(first_responded_on, issue_creation_date) - 1, support_hours
+			)
+
+		# time taken on day of issue creation
+		if is_work_day(issue_creation_date, support_hours):
+			start_time, end_time = get_working_hours(issue_creation_date, support_hours)
+
+			if is_during_working_hours(issue_creation_date, support_hours):
+				first_response_time += get_elapsed_time(issue_creation_time, end_time)
+			elif is_before_working_hours(issue_creation_date, support_hours):
+				first_response_time += get_elapsed_time(start_time, end_time)
+
+		# time taken on day of first response
+		if is_work_day(first_responded_on, support_hours):
+			start_time, end_time = get_working_hours(first_responded_on, support_hours)
+
+			if is_during_working_hours(first_responded_on, support_hours):
+				first_response_time += get_elapsed_time(start_time, first_responded_on_in_seconds)
+			elif not is_before_working_hours(first_responded_on, support_hours):
+				first_response_time += get_elapsed_time(start_time, end_time)
+
+		if first_response_time:
+			return first_response_time
+		else:
+			return 1.0
+
+
+def get_time_in_seconds(date):
+	return timedelta(hours=date.hour, minutes=date.minute, seconds=date.second)
+
+
+def get_working_hours(date, support_hours):
+	if is_work_day(date, support_hours):
+		weekday = terminal_framework.utils.get_weekday(date)
+		for day in support_hours:
+			if day.workday == weekday:
+				return day.start_time, day.end_time
+
+
+def is_work_day(date, support_hours):
+	weekday = terminal_framework.utils.get_weekday(date)
+	for day in support_hours:
+		if day.workday == weekday:
+			return True
+	return False
+
+
+def is_during_working_hours(date, support_hours):
+	start_time, end_time = get_working_hours(date, support_hours)
+	time = get_time_in_seconds(date)
+	if time >= start_time and time <= end_time:
+		return True
+	return False
+
+
+def get_elapsed_time(start_time, end_time):
+	return round(time_diff_in_seconds(end_time, start_time), 2)
+
+
+def calculate_initial_frt(issue_creation_date, days_in_between, support_hours):
+	initial_frt = 0
+	for i in range(days_in_between):
+		date = issue_creation_date + timedelta(days=(i + 1))
+		if is_work_day(date, support_hours):
+			start_time, end_time = get_working_hours(date, support_hours)
+			initial_frt += get_elapsed_time(start_time, end_time)
+
+	return initial_frt
+
+
+def is_before_working_hours(date, support_hours):
+	start_time, end_time = get_working_hours(date, support_hours)
+	time = get_time_in_seconds(date)
+	if time < start_time:
+		return True
+	return False
+
+
+def get_holidays(holiday_list_name):
+	holiday_list = terminal_framework.get_cached_doc("Holiday List", holiday_list_name)
+	holidays = [holiday.holiday_date for holiday in holiday_list.holidays]
+	return holidays

@@ -5,13 +5,13 @@ function _(txt: string, replace?: string[], context = null) {
     let translated_text = "";
 
     const key = txt; // txt.replace(/\n/g, "");
-    if (window.frappe) {
+    if (window.terminal_framework) {
         if (context) {
-            translated_text = window.frappe._messages[`${key}:${context}`];
+            translated_text = window.terminal_framework._messages[`${key}:${context}`];
         }
 
         if (!translated_text) {
-            translated_text = window.frappe?._messages?.[key] || txt;
+            translated_text = window.terminal_framework?._messages?.[key] || txt;
         }
 
     } else {

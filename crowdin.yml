@@ -1,6 +1,6 @@
 files:
-  - source: /erpnext/locale/main.pot
-    translation: /erpnext/locale/%two_letters_code%.po
+  - source: /terminal_erp/locale/main.pot
+    translation: /terminal_erp/locale/%two_letters_code%.po
 pull_request_title: "fix: sync translations from crowdin"
 pull_request_labels:
   - translation

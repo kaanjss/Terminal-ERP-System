@@ -134,9 +134,9 @@ jobs:
         run: |
           site_name=$(echo "${{matrix.test}}" | sed -e 's/.*\.\(test_.*$\)/\1/')
           echo "$site_name"
-          mkdir ~/frappe-bench/sites/$site_name
-          cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_mariadb.json" ~/frappe-bench/sites/$site_name/site_config.json
-          cd ~/frappe-bench/
+          mkdir ~/terminal_framework-bench/sites/$site_name
+          cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config_mariadb.json" ~/terminal_framework-bench/sites/$site_name/site_config.json
+          cd ~/terminal_framework-bench/
           bench --site $site_name reinstall --yes
           bench --site $site_name set-config allow_tests true
           bench --site $site_name run-tests --module ${{ matrix.test }} --lightmode

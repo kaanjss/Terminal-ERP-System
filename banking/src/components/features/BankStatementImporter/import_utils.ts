@@ -1,5 +1,5 @@
 import { BankStatementImportLog } from "@/types/Accounts/BankStatementImportLog"
-import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
+import { useTerminal FrameworkGetCall, useTerminal FrameworkPostCall } from "terminal_framework-react-sdk"
 
 export type ColumnMapsTo =
     | "Do not import"
@@ -125,7 +125,7 @@ export interface GetStatementDetailsResponse {
 }
 
 export const useGetStatementDetails = (id: string) => {
-    return useFrappeGetCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.get_statement_details", {
+    return useTerminal FrameworkGetCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.get_statement_details", {
         statement_import_id: id,
     }, undefined, {
         revalidateOnFocus: false
@@ -134,21 +134,21 @@ export const useGetStatementDetails = (id: string) => {
 }
 
 export const useUpdatePDFTables = () => {
-    return useFrappePostCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.update_pdf_tables")
+    return useTerminal FrameworkPostCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.update_pdf_tables")
 }
 
 export const useReextractPDFTable = () => {
-    return useFrappePostCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.reextract_pdf_table")
+    return useTerminal FrameworkPostCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.reextract_pdf_table")
 }
 
 export const useSetPDFTableHeader = () => {
-    return useFrappePostCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.set_pdf_table_header")
+    return useTerminal FrameworkPostCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.set_pdf_table_header")
 }
 
 export const useUpdateColumnMapping = () => {
-    return useFrappePostCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.update_column_mapping")
+    return useTerminal FrameworkPostCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.update_column_mapping")
 }
 
 export const useSetHeaderIndex = () => {
-    return useFrappePostCall<{ message: GetStatementDetailsResponse }>("erpnext.accounts.doctype.bank_statement_import_log.bank_statement_import_log.set_header_index")
+    return useTerminal FrameworkPostCall<{ message: GetStatementDetailsResponse }>("terminal_erp.accounts.doctype.bank_statement_import_log.bank_statement_import_log.set_header_index")
 }

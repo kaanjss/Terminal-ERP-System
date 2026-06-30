@@ -1,5 +1,5 @@
 import { getCurrencyNumberFormat, getCurrencyProperty, getCurrencySymbol } from "./currency";
-import { getSystemDefault } from "./frappe";
+import { getSystemDefault } from "./terminal_framework";
 import _ from "@/lib/translate";
 
 export const formatCurrency = (value?: number, currency: string = '', decimals: number = 2) => {

@@ -17,31 +17,31 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="white">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="shortcut icon" href="{{ favicon or ' /assets/erpnext/images/erpnext-favicon.svg' }}" type="image/x-icon">
-  <link rel="icon" href="{{ favicon or ' /assets/erpnext/images/erpnext-favicon.svg' }}" type="image/x-icon">
+  <link rel="shortcut icon" href="{{ favicon or ' /assets/terminal_erp/images/terminal_erp-favicon.svg' }}" type="image/x-icon">
+  <link rel="icon" href="{{ favicon or ' /assets/terminal_erp/images/terminal_erp-favicon.svg' }}" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Banking | {{ app_name }}</title>
 </head>
 
 <body>
   <div id="root"></div>
-  <script>window.csrf_token = '{{ frappe.session.csrf_token }}';
-    if (!window.frappe) window.frappe = {};
+  <script>window.csrf_token = '{{ terminal_framework.session.csrf_token }}';
+    if (!window.terminal_framework) window.terminal_framework = {};
 
-    frappe.boot = JSON.parse({{ boot }});
-    frappe.boot.layout_direction = "{{ layout_direction }}";
+    terminal_framework.boot = JSON.parse({{ boot }});
+    terminal_framework.boot.layout_direction = "{{ layout_direction }}";
 
-    frappe._translations_loaded = fetch(
-      `/api/method/frappe.translate.get_boot_translations?v=${frappe.boot.translations_version}&lang=${frappe.boot.lang}`,
+    terminal_framework._translations_loaded = fetch(
+      `/api/method/terminal_framework.translate.get_boot_translations?v=${terminal_framework.boot.translations_version}&lang=${terminal_framework.boot.lang}`,
       {
         credentials: "same-origin",
         headers: {
-          "X-Frappe-CSRF-Token": frappe.csrf_token,
+          "X-Terminal Framework-CSRF-Token": terminal_framework.csrf_token,
           "Accept": "application/json"
         }
       }
     ).then(r => r.json()).then(data => {
-      frappe._messages = data.message || {};
+      terminal_framework._messages = data.message || {};
     }).catch(() => { });
   </script>
   <script type="module" src="/src/main.tsx"></script>

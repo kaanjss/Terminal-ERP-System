@@ -1,15 +1,15 @@
 {
-  "name": "erpnext",
-  "description": "Open Source ERP System powered by the Frappe Framework",
+  "name": "terminal_erp",
+  "description": "Open Source ERP System powered by the Terminal Framework Framework",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frappe/erpnext.git"
+    "url": "git+https://github.com/terminal_framework/terminal_erp.git"
   },
-  "homepage": "https://frappe.io/erpnext",
-  "author": "Frappe Technologies Pvt. Ltd.",
+  "homepage": "https://terminal_framework.io/terminal_erp",
+  "author": "Terminal Framework Technologies Pvt. Ltd.",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/frappe/erpnext/issues"
+    "url": "https://github.com/terminal_framework/terminal_erp/issues"
   },
   "scripts": {
     "postinstall": "cd banking && yarn install",

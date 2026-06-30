@@ -1,8 +1,8 @@
-import { useFrappeGetCall } from "frappe-react-sdk"
+import { useTerminal FrameworkGetCall } from "terminal_framework-react-sdk"
 
 const useFiscalYear = () => {
 
-    return useFrappeGetCall("erpnext.accounts.utils.get_fiscal_year", undefined, 'fiscal_year', {
+    return useTerminal FrameworkGetCall("terminal_erp.accounts.utils.get_fiscal_year", undefined, 'fiscal_year', {
         revalidateOnFocus: false,
         revalidateIfStale: false,
         revalidateOnReconnect: false

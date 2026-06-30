@@ -1,0 +1,6 @@
+// Copyright (c) 2017, Terminal Framework Technologies Pvt. Ltd. and contributors
+// For license information, please see license.txt
+
+terminal_framework.ui.form.on("Supplier Scorecard Variable", {
+	refresh: function () {},
+});

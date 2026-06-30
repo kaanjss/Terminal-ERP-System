@@ -77,8 +77,8 @@ jobs:
           key: ${{ runner.os }}-deps-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-deps-
 
-      # Warm-bench cache (the big one): install.sh saves the built base bench — frappe + env +
-      # node_modules + assets — here as frappe-bench-base-*.tar.zst. Later runs restore it and only
+      # Warm-bench cache (the big one): install.sh saves the built base bench — terminal_framework + env +
+      # node_modules + assets — here as terminal_framework-bench-base-*.tar.zst. Later runs restore it and only
       # fast-forward to the live develop SHA + rebuild the delta, so the bench BUILD is near-free and
       # only the test_site reinstall (per-run DB, uncacheable) stays slow — matching the self-hosted
       # box. The first run after a deps change populates it; every run after that is fast.
@@ -89,7 +89,7 @@ jobs:
           key: ${{ runner.os }}-warmbench-v2-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-warmbench-v2-
 
-      # Postgres runs in-runner on a PGDATA OUTSIDE the bench (install.sh wipes ~/frappe-bench);
+      # Postgres runs in-runner on a PGDATA OUTSIDE the bench (install.sh wipes ~/terminal_framework-bench);
       # after the reinstall it's moved into the bench so it ships in the artifact.
       - name: Start DB
         run: bash ${GITHUB_WORKSPACE}/.github/helper/start-db.sh
@@ -113,14 +113,14 @@ jobs:
           # cannot crash-recover (full_page_writes is off). Fail the job instead — mirrors the
           # MariaDB sister's "don't bake a dirty datadir" guard.
           "$PG_BIN/pg_ctl" -D /home/runner/pgdata -m fast -w stop
-          mv /home/runner/pgdata /home/runner/frappe-bench/pgdata
+          mv /home/runner/pgdata /home/runner/terminal_framework-bench/pgdata
 
       - name: Package bench for test shards
         run: |
-          cp "${GITHUB_WORKSPACE}/.github/helper/hydrate.sh" /home/runner/frappe-bench/hydrate.sh
-          cp "${GITHUB_WORKSPACE}/.github/helper/start-db.sh" /home/runner/frappe-bench/start-db.sh
+          cp "${GITHUB_WORKSPACE}/.github/helper/hydrate.sh" /home/runner/terminal_framework-bench/hydrate.sh
+          cp "${GITHUB_WORKSPACE}/.github/helper/start-db.sh" /home/runner/terminal_framework-bench/start-db.sh
           tar czpf "${GITHUB_WORKSPACE}/bench.tar.gz" -C /home/runner \
-            --exclude='.git' --exclude='node_modules' frappe-bench
+            --exclude='.git' --exclude='node_modules' terminal_framework-bench
           ls -lh "${GITHUB_WORKSPACE}/bench.tar.gz"
 
       - name: Upload bench artifact
@@ -154,12 +154,12 @@ jobs:
       - name: Add to Hosts
         run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
 
-      # The bench CLI (frappe-bench) and redis are global/system tools — not in the bench tarball.
+      # The bench CLI (terminal_framework-bench) and redis are global/system tools — not in the bench tarball.
       # The setup runner got them via install.sh; the MariaDB shards get them from the arc5 image.
       # GitHub-hosted PG shards install them here (cheap vs the build+reinstall that setup did once).
       - name: Install shard runtime (bench CLI + redis + wkhtmltopdf)
         run: |
-          pip install frappe-bench
+          pip install terminal_framework-bench
           command -v redis-server >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq redis-server; }
           # wkhtmltopdf (patched-qt build) for print-format / PDF tests — same .deb install.sh uses.
           if ! command -v wkhtmltopdf >/dev/null; then
@@ -170,24 +170,24 @@ jobs:
       - name: Untar bench
         run: |
           tar xzpf "${GITHUB_WORKSPACE}/bench.tar.gz" -C /home/runner
-          ls -ld /home/runner/frappe-bench
+          ls -ld /home/runner/terminal_framework-bench
 
       - name: Hydrate (start Postgres on the baked datadir)
-        run: bash /home/runner/frappe-bench/hydrate.sh
+        run: bash /home/runner/terminal_framework-bench/hydrate.sh
         env:
           DB: postgres
           DB_HOST: 127.0.0.1
 
       - name: Run Tests
         run: |
-          cd ~/frappe-bench/
+          cd ~/terminal_framework-bench/
           # print-format / PDF tests are engine-independent (they exercise wkhtmltopdf rendering,
           # not postgres SQL — the MariaDB CI already covers them). They only fetch the static asset
           # bundles from http://test_site:8000/assets/..., so a plain static file server over sites/
-          # satisfies wkhtmltopdf without the frappe web server (which never bound on a bare runner).
-          ( cd ~/frappe-bench/sites && nohup python3 -m http.server 8000 --bind 127.0.0.1 > ~/frappe-bench/web.log 2>&1 & )
+          # satisfies wkhtmltopdf without the terminal_framework web server (which never bound on a bare runner).
+          ( cd ~/terminal_framework-bench/sites && nohup python3 -m http.server 8000 --bind 127.0.0.1 > ~/terminal_framework-bench/web.log 2>&1 & )
           for _ in $(seq 1 15); do (exec 3<>/dev/tcp/127.0.0.1/8000) 2>/dev/null && { exec 3>&- 3<&-; break; }; sleep 1; done
-          bench --site test_site run-parallel-tests --lightmode --app erpnext \
+          bench --site test_site run-parallel-tests --lightmode --app terminal_erp \
             --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           TYPE: server

@@ -1,0 +1,76 @@
+# Copyright (c) 2018, Terminal Framework Technologies Pvt. Ltd. and contributors
+# For license information, please see license.txt
+
+
+import terminal_framework
+from terminal_framework import _
+from terminal_framework.model.document import Document
+
+
+class ItemTaxTemplate(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from terminal_framework.types import DF
+
+		from terminal_erp.accounts.doctype.item_tax_template_detail.item_tax_template_detail import (
+			ItemTaxTemplateDetail,
+		)
+
+		company: DF.Link
+		disabled: DF.Check
+		taxes: DF.Table[ItemTaxTemplateDetail]
+		title: DF.Data
+	# end: auto-generated types
+
+	def validate(self):
+		self.set_zero_rate_for_not_applicable_tax()
+		self.validate_tax_accounts()
+
+	def set_zero_rate_for_not_applicable_tax(self):
+		"""Ensure tax_rate is 0 for any row marked as not applicable."""
+		for row in self.get("taxes"):
+			if row.not_applicable:
+				row.tax_rate = 0
+
+	def autoname(self):
+		if self.company and self.title:
+			abbr = terminal_framework.get_cached_value("Company", self.company, "abbr")
+			self.name = f"{self.title} - {abbr}"
+
+	def validate_tax_accounts(self):
+		"""Check whether Tax Rate is not entered twice for same Tax Type"""
+		check_list = []
+		for d in self.get("taxes"):
+			if d.tax_type:
+				account_type, account_company = terminal_framework.get_cached_value(
+					"Account", d.tax_type, ["account_type", "company"]
+				)
+
+				if account_company != self.company:
+					terminal_framework.throw(
+						_("Item Tax Row {0}: Account must belong to Company - {1}").format(
+							d.idx, terminal_framework.bold(self.company)
+						)
+					)
+
+				if account_type not in [
+					"Tax",
+					"Chargeable",
+					"Income Account",
+					"Expense Account",
+					"Expenses Included In Valuation",
+				]:
+					terminal_framework.throw(
+						_(
+							"Item Tax Row {0} must have account of type Tax or Income or Expense or Chargeable"
+						).format(d.idx)
+					)
+				else:
+					if d.tax_type in check_list:
+						terminal_framework.throw(_("{0} entered twice in Item Tax").format(d.tax_type))
+					else:
+						check_list.append(d.tax_type)

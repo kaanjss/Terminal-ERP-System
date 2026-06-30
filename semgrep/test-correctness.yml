@@ -1,11 +1,11 @@
 rules:
 - id: Dont-commit
-  pattern: frappe.db.commit()
+  pattern: terminal_framework.db.commit()
   message: Commiting inside test breaks idempotency.
   languages: [python]
   severity: ERROR
 - id: Implicit-commit
-  pattern: frappe.db.truncate()
+  pattern: terminal_framework.db.truncate()
   message: DB truncation does implict commit which breaks test idempotency.
   languages: [python]
   severity: ERROR
@@ -19,6 +19,6 @@ rules:
         ...
         super().tearDown()
         ...
-  message: ERPNextTestSuite forces rollback on each tearDown, which ensures idempotency. Don't override tearDown.
+  message: Terminal ERPTestSuite forces rollback on each tearDown, which ensures idempotency. Don't override tearDown.
   languages: [python]
   severity: ERROR

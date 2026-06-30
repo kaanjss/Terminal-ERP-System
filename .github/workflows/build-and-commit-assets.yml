@@ -21,50 +21,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: frappe/frappe
-          path: apps/frappe
+          repository: terminal_framework/terminal_framework
+          path: apps/terminal_framework
           ref: ${{ github.ref_name }}
 
       - uses: actions/checkout@v4
         with:
-          path: apps/erpnext
+          path: apps/terminal_erp
 
       - name: Create bench structure
         run: |
           mkdir -p sites
-          printf "frappe\nerpnext\n" > sites/apps.txt
+          printf "terminal_framework\nterminal_erp\n" > sites/apps.txt
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: yarn
-          cache-dependency-path: apps/frappe/yarn.lock
+          cache-dependency-path: apps/terminal_framework/yarn.lock
 
-      - name: Install frappe JS dependencies
-        working-directory: apps/frappe
+      - name: Install terminal_framework JS dependencies
+        working-directory: apps/terminal_framework
         run: yarn install --frozen-lockfile
 
-      - name: Install erpnext JS dependencies
-        working-directory: apps/erpnext
+      - name: Install terminal_erp JS dependencies
+        working-directory: apps/terminal_erp
         run: yarn install --frozen-lockfile --ignore-scripts
 
       - name: Link node_modules into public/
-        working-directory: apps/frappe
-        run: ln -s "$PWD/node_modules" frappe/public/node_modules
+        working-directory: apps/terminal_framework
+        run: ln -s "$PWD/node_modules" terminal_framework/public/node_modules
 
       - name: Build assets (production)
-        working-directory: apps/frappe
+        working-directory: apps/terminal_framework
         run: yarn run production
 
       - name: Package assets
-        working-directory: apps/erpnext
-        run: tar czf erpnext-assets.tar.gz -C ../../sites/assets/erpnext dist
+        working-directory: apps/terminal_erp
+        run: tar czf terminal_erp-assets.tar.gz -C ../../sites/assets/terminal_erp dist
 
       - name: Upload to rolling release
-        working-directory: apps/erpnext
+        working-directory: apps/terminal_erp
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="assets-${GITHUB_REF_NAME//\//-}"
           gh release create "$TAG" --prerelease --title "Assets: $GITHUB_REF_NAME" --notes "" 2>/dev/null || true
-          gh release upload "$TAG" erpnext-assets.tar.gz --clobber
+          gh release upload "$TAG" terminal_erp-assets.tar.gz --clobber

@@ -1,6 +1,6 @@
-if (!window.frappe) window.frappe = {};
+if (!window.terminal_framework) window.terminal_framework = {};
 
-frappe.provide = function (namespace) {
+terminal_framework.provide = function (namespace) {
 	// docs: create a namespace //
 	var nsl = namespace.split(".");
 	var parent = window;
@@ -14,9 +14,9 @@ frappe.provide = function (namespace) {
 	return parent;
 };
 
-frappe.provide("locals");
-frappe.provide("frappe.flags");
-frappe.provide("frappe.settings");
-frappe.provide("locals.DocType");
-frappe.provide("frappe.model");
-frappe.provide("frappe.defaults");
+terminal_framework.provide("locals");
+terminal_framework.provide("terminal_framework.flags");
+terminal_framework.provide("terminal_framework.settings");
+terminal_framework.provide("locals.DocType");
+terminal_framework.provide("terminal_framework.model");
+terminal_framework.provide("terminal_framework.defaults");
